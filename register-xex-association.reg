@@ -1,0 +1,10 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CURRENT_USER\Software\Classes\.xex]
+@="XEXFile"
+
+[HKEY_CURRENT_USER\Software\Classes\XEXFile]
+@="Atari XEX"
+
+[HKEY_CURRENT_USER\Software\Classes\XEXFile\shell\open\command]
+@="\"C:\\Tools\\Mads\\run-xex.cmd\" \"%1\""

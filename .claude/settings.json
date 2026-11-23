@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(./mads.exe:*)",
+      "Bash(mads.exe:*)",
+      "Bash(./run-xex.cmd:*)",
+      "Bash(python .claude/skills/xex-inspect/xex_inspect.py:*)",
+      "Bash(xxd:*)",
+      "Bash(od:*)",
+      "PowerShell(./mads.exe:*)",
+      "PowerShell(./run-xex.cmd:*)",
+      "Read(Mad-Assembler-2.1.6/**)"
+    ],
+    "deny": [
+      "Edit(mads.pas)",
+      "Edit(Mad-Assembler-2.1.6/**)",
+      "Write(Mad-Assembler-2.1.6/**)",
+      "Edit(RiverRaid.xex)",
+      "Write(RiverRaid.xex)"
+    ]
+  }
+}

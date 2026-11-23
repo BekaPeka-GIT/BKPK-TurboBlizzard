@@ -1,0 +1,22 @@
+# Gry i kasety (cudze prawa autorskie) - nie publikujemy
+*.xex
+*.cas
+*.atr
+TurboBlizzardCas/
+tape/
+
+# Artefakty kompilacji MADS
+*.lst
+*.lab
+*.bin
+*.obx
+
+# Python
+__pycache__/
+*.pyc
+
+# Lokalne ustawienia Claude Code
+.claude/settings.local.json
+
+# Odtworzenie gry Nintendo (nazwa/postacie chronione) - poza publicznym repo
+mario.asm
