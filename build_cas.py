@@ -80,7 +80,7 @@ def split_records(stream):
     return recs
 
 
-def boot_cas(loader, irg_first, irg, desc):
+def boot_cas(loader, irg_first, irg, desc, load_expect=BOOT_LOAD):
     """Początek taśmy: FUJI + baud + rekordy boot loadera + EOF.
     Zwraca (bajty CAS, liczba rekordów boot)."""
     if loader[0] != 0:
@@ -91,8 +91,8 @@ def boot_cas(loader, irg_first, irg, desc):
     if nboot != len(padded) // REC:
         sys.exit("BLAD: licznik rekordow boot (%d) != rozmiar loadera (%d rek.)"
                  % (nboot, len(padded) // REC))
-    if load != BOOT_LOAD:
-        sys.exit("BLAD: adres ladowania $%04X (oczekiwano $%04X)" % (load, BOOT_LOAD))
+    if load != load_expect:
+        sys.exit("BLAD: adres ladowania $%04X (oczekiwano $%04X)" % (load, load_expect))
     out = chunk(b"FUJI", 0, desc.encode("ascii", "replace"))
     out += chunk(b"baud", 600)
     for k in range(nboot):
@@ -102,7 +102,7 @@ def boot_cas(loader, irg_first, irg, desc):
     return out, nboot
 
 
-def build(loader, xex, irg_first, irg, desc, irg_file=None):
+def build(loader, xex, irg_first, irg, desc, irg_file=None, load=BOOT_LOAD):
     if irg_file is None:
         irg_file = irg_first
     segs, end = xex_segments(xex)
@@ -114,13 +114,13 @@ def build(loader, xex, irg_first, irg, desc, irg_file=None):
     if loader[0] != 0:
         sys.exit("BLAD: pierwszy bajt naglowka boot powinien byc 0")
     nboot = loader[1]
-    load = loader[2] | loader[3] << 8
+    load_addr = loader[2] | loader[3] << 8
     padded = loader + bytes(-len(loader) % REC)
     if nboot != len(padded) // REC:
         sys.exit("BLAD: licznik rekordow boot (%d) != rozmiar loadera (%d rek.)"
                  % (nboot, len(padded) // REC))
-    if load != BOOT_LOAD:
-        sys.exit("BLAD: adres ladowania $%04X (oczekiwano $%04X)" % (load, BOOT_LOAD))
+    if load_addr != load:
+        sys.exit("BLAD: adres ladowania $%04X (oczekiwano $%04X)" % (load_addr, load))
 
     out = chunk(b"FUJI", 0, desc.encode("ascii", "replace"))
     out += chunk(b"baud", 600)

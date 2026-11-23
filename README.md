@@ -86,15 +86,17 @@ python make_tape.py KeystoneKapers.xex --title "KEYSTONE KAPERS" --anim
 Gra:    RiverRaid.xex -> "RIVER RAID", 2 segmentow, 8220 B danych, 9 blokow
 INIT:   brak
 RUN:    $9FF6
-Loader: $0600-$0FB0, ekran $1E00-$3CCF
-CAS:    tape\riverraid\riverraid_turbo.cas (12797 B, ... weryfikacja OK)
+Loader: $0600-$1034, ekran $1E00-$3CCF, strona zerowa $CE-$F0
+CAS:    tape\riverraid\riverraid_turbo.cas (12937 B, ... weryfikacja OK)
 Czas:   loader ok. 71 s (600 bodow), gra ok. 25 s (turbo)
 ```
 
-- **`BLAD:`** — kaseta **nie powstała**. Najczęstsze przyczyny: gra nadpisuje pamięć loadera (`$0600-…`), stos, bufory systemu (`$0300-$047F`) albo ROM, za mało wolnej pamięci na ekran, gra za duża.
+- **`BLAD:`** — kaseta **nie powstała**. Najczęstsze przyczyny: gra zajmuje prawie całą pamięć (nie ma gdzie położyć loadera ani ekranu), ładuje się na stos (`$0100-$01FF`, w turbo tylko górę `$01C0-$01FF`) albo na bufory systemu `$0300-$047F` (tylko wersja 600 bodów), wyłącza ROM przez PORTB, jest za duża.
+- Skrypt **sam rozmieszcza** loader w pamięci: gdy gra ładuje coś na stronę zerową `$CE…`, zmienne loadera idą gdzie indziej (`$D6`, `$B0`…); gdy gra zajmuje `$0600`, loader ładuje się od pierwszej wolnej strony (`$0700`…); w turbo bufor bloku może leżeć osobno od ekranu. Wypisuje to w linii `Loader:` i jako `UWAGA:`.
 - **`UWAGA:`** — kaseta powstała, ale warto ją przetestować:
   - `brak RUNAD` — gra startuje z ostatniego INIT. To normalne, jeśli ten INIT nie wraca (np. Ninja).
-  - `gra ma INIT` — procedury INIT gry mogą wyczyścić pamięć ekranu loadera. Loader po każdym INIT przywraca swój ekran, ale nie odtworzy zamazanej grafiki.
+  - `gra ma INIT` — procedury INIT gry mogą użyć pamięci ekranu loadera (np. rozpakować tam dane). Loader sprawdza sumą kontrolną, czy INIT ruszył pamięć ekranu. Jeśli nie — przywraca swój ekran (lista wyświetlania, kolory). Jeśli tak — **wygasza ekran do końca ładowania** i nic już tam nie rysuje, żeby nie zepsuć danych gry (ekran ma wtedy jednolity kolor tła; błąd = czerwone tło).
+  - `trafia do ROM` / `rejestry sprzetu` — gra ma segment w ROM albo w rejestrach `$D000-$D7FF` (np. Pac-Man pisze `$D301`, `$D400`). Zachowanie jak przy ładowaniu z DOS: zapis do ROM przepada, rejestr dostaje wartość.
   - `strona 2` — gra zmienia zmienne systemu, zwykle nieszkodliwe.
 
 ### Pliki wyniku (`tape/<nazwa>/`)
@@ -187,9 +189,9 @@ BLAD KASETY $8F  ETAP D
 
 ## 8. Ograniczenia
 
-- **Pamięć:** gra nie może ładować się na loader (`$0600` do ok. `$1000`), stos, bufory systemu `$0300-$047F`, zmienne loadera na stronie zerowej (`$CE-$EA`, w turbo `$CE-$F0`) ani ROM `$C000+`. Ekran loadera (ok. 6,2 KB, w turbo ok. 7,9 KB, z `--anim` ok. 16,8 KB) skrypt sam umieszcza w wolnej pamięci.
+- **Pamięć:** loader (ok. 2,6 KB od `$0600` lub pierwszej wolnej strony), jego zmienne na stronie zerowej (29 B, w turbo 35 B) i ekran (ok. 6,2 KB; w turbo ok. 7,9 KB albo 6,2 KB + 1,7 KB osobno; z `--anim` ok. 16,8 KB) muszą się zmieścić w pamięci, której gra nie ładuje — skrypt sam szuka miejsca. Gra nie może ładować się na stos ani (w wersji 600 bodów) na `$0300-$047F`. Gry wypełniające całą pamięć (np. Ghostbusters: 183 segmenty `$0B00-$BFFA`) się nie zmieszczą — dla nich `make_blizzard.py`.
 - **Rozmiar:** wersja 600 bodów do ok. 32 KB (255 bloków po 128 B), turbo do ok. 63 KB.
-- **Procedury INIT gry** mogą zamazać ekran loadera. Loader przywraca listę wyświetlania i kolory, ale nie grafikę.
+- **Procedury INIT gry**, które użyją pamięci ekranu, wygaszają ekran loadera do końca ładowania (patrz wyżej).
 - `--anim` i `--turbo` się wykluczają.
 - `--title` w `make_tape.py`: tylko znaki trybu ANTIC 7 (wielkie litery, cyfry, spacja, interpunkcja), max 20.
 

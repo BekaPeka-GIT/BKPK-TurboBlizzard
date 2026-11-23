@@ -45,7 +45,7 @@
 ; Gra trafia do bufora BUF (1 KB + 4), a stamtad przez getbyte do pamieci;
 ; po kazdym bloku odswiezany jest postep. TURBO wyklucza ANIM.
 ;
-; Wynik to surowy plik boot (opt h-), ladowany pod $0600.
+; Wynik to surowy plik boot (opt h-), ladowany pod LDRORG (domyslnie $0600).
 ; =====================================================================
 
         opt h-                  ; surowy plik, bez naglowka XEX
@@ -53,6 +53,15 @@
         icl 'tape_cfg.inc'      ; TOTALB, TOTBLK, SHIFT, UNITS, SCR4K, TCOLOR, ANIM, TURBO
         .ifndef TURBO
 TURBO   = 0
+        .endif
+        .ifndef LDRORG
+LDRORG  = $0600                 ; adres ladowania loadera (rekordy boot)
+        .endif
+        .ifndef ZPB
+ZPB     = $CE                   ; poczatek zmiennych loadera na stronie zerowej
+        .endif
+        .ifndef EXT
+EXT     = SCR4K+$640            ; TURBO: bufor bloku + bitmapy tekstu
         .endif
         .if TURBO&&ANIM
         .error "TURBO i ANIM naraz nie dzialaja (animacja wymaga VBI)"
@@ -147,41 +156,44 @@ TH_PIL  = 679                   ; ~385 us: srodek miedzy 1 (272 us) a pilotem (4
 PILOTN  = 64                    ; tyle okresow pilota z rzedu = poczatek bloku
 NAMELEN = 76                    ; naglowek Blizzarda: nazwa 76 znakow + suma
 BLOCK   = 1024
-BUF     = SCR4K+$640            ; bufor bloku: dl. 2 B + 1024 B + 00 + suma
+; EXT: bufor bloku + bitmapy tekstu ($690 B), domyslnie zaraz za ekranem;
+; make_tape.py moze go dac gdzie indziej, gdy tam jest gra
+BUF     = EXT                   ; bufor bloku: dl. 2 B + 1024 B + 00 + suma
 ; Linie tekstu trybu 2 maja "zla linie" (40 kodow + 40 bajtow znakow w jednej
 ; linii), ktora zatrzymuje CPU na ~80 cykli - to psulo pomiar okresu.
 ; W TURBO status i adres strony sa bitmapami trybu F (8 x 40 B, litery z ROM).
-STATBM  = SCR4K+$A50            ; bitmapa linii statusu
-WWWBM   = SCR4K+$B90            ; bitmapa adresu strony (do SCR4K+$CCF)
+STATBM  = EXT+$410               ; bitmapa linii statusu
+WWWBM   = EXT+$550               ; bitmapa adresu strony (do EXT+$68F)
 CHROM   = $E000                 ; zestaw znakow w ROM
         .endif
 
-; --- zmienne na stronie zerowej ---
-src     = $CE                   ; wskaznik zrodla (2 B)
-segst   = $D0                   ; poczatek segmentu (2 B)
-segend  = $D2                   ; koniec segmentu (2 B)
-dst     = $D4                   ; adres docelowy (2 B)
-len     = $D6                   ; dlugosc (2 B)
-stage   = $D8                   ; litera etapu (diagnostyka bledu)
-done    = $D9                   ; wczytane bajty danych (2 B)
-pct     = $DB                   ; procent 0..100
-fill    = $DC                   ; narysowana szerokosc paska
-chunk   = $DD                   ; rozmiar biezacej porcji
-t1      = $DE
-t2      = $DF
-acc     = $E0                   ; (2 B)
-lim     = $E2                   ; (2 B)
-nfill   = $E4
-d0      = $E5
-d1      = $E6
-d2      = $E7
-blk     = $E8
-ql      = $E9
-qh      = $EA
+; --- zmienne na stronie zerowej: ZPB .. ZPB+$1C (TURBO: ZPB+$22); ZPB wybiera
+;     make_tape.py tak, zeby nie nachodzily na segmenty gry (domyslnie $CE) ---
+src     = ZPB+$00                   ; wskaznik zrodla (2 B)
+segst   = ZPB+$02                   ; poczatek segmentu (2 B)
+segend  = ZPB+$04                   ; koniec segmentu (2 B)
+dst     = ZPB+$06                   ; adres docelowy (2 B)
+len     = ZPB+$08                   ; dlugosc (2 B)
+stage   = ZPB+$0A                   ; litera etapu (diagnostyka bledu)
+done    = ZPB+$0B                   ; wczytane bajty danych (2 B)
+pct     = ZPB+$0D                   ; procent 0..100
+fill    = ZPB+$0E                   ; narysowana szerokosc paska
+chunk   = ZPB+$0F                   ; rozmiar biezacej porcji
+t1      = ZPB+$10
+t2      = ZPB+$11
+acc     = ZPB+$12                   ; (2 B)
+lim     = ZPB+$14                   ; (2 B)
+nfill   = ZPB+$16
+d0      = ZPB+$17
+d1      = ZPB+$18
+d2      = ZPB+$19
+blk     = ZPB+$1A
+ql      = ZPB+$1B
+qh      = ZPB+$1C
         .if TURBO
-used    = $EB                   ; bajty strumienia XEX oddane przez getbyte (2 B)
-bleft   = $ED                   ; bajty pozostale w buforze (2 B)
-bptr    = $EF                   ; wskaznik w buforze (2 B)
+used    = ZPB+$1D                   ; bajty strumienia XEX oddane przez getbyte (2 B)
+bleft   = ZPB+$1F                   ; bajty pozostale w buforze (2 B)
+bptr    = ZPB+$21                   ; wskaznik w buforze (2 B)
 ; tblock dziala poza update, wiec pozycza jego zmienne:
 tptr    = acc                   ; wskaznik zapisu (2 B)
 tcnt    = lim                   ; licznik bajtow (2 B)
@@ -189,7 +201,7 @@ tlen    = ql                    ; dlugosc bloku z suma (ql, qh)
 tbyte   = t1                    ; skladany bajt / licznik pilota / suma
         .endif
 
-        org $0600
+        org LDRORG
 
 ; --- naglowek rekordu boot (6 bajtow) ---
 boot    dta 0                           ; flagi
@@ -415,6 +427,12 @@ error   tya
         pha
         lda #$3C
         sta PACTL
+        lda hidden              ; ekran wylaczony (pamiec zajela gra):
+        beq er_scr              ; blad = czerwone tlo
+        lda #$34
+        sta COLOR4
+        jmp *
+er_scr
         lda #<msg_err
         ldx #>msg_err
         jsr settext
@@ -684,16 +702,68 @@ di_go
         .if ANIM
         jsr animoff             ; INIT gry dostaje system bez naszych przerwan
         .endif
+        jsr scrsum              ; suma pamieci ekranu przed INIT
+        lda lim
+        sta ssum
+        lda lim+1
+        sta ssum+1
         jsr callinit
-        jsr scron               ; INIT gry mogl podmienic Display List i kolory
+        jsr scrsum              ; INIT zmienil pamiec ekranu (np. rozpakowal tam
+        lda lim                 ; dane gry, jak Bruce Lee)? - wtedy ekran zostaje
+        cmp ssum                ; wylaczony do konca, a loader juz nic nie rysuje
+        bne di_hid
+        lda lim+1
+        cmp ssum+1
+        beq di_ok
+di_hid  lda #1
+        sta hidden
+di_ok   jsr scron               ; INIT gry mogl podmienic Display List i kolory
         .if ANIM
+        lda hidden
+        bne di_na
         jsr animon
+di_na
         .endif
         lda #$34
         sta PACTL
         jsr setinit
 di_end  rts
 callinit jmp (INITAD)
+
+; scrsum: 16-bitowa suma bajtow bloku ekranu SCR4K-$1200 .. SCR4K+$63F -> lim
+SCRLEN  = $1840
+scrsum  lda #<[SCR4K-$1200]
+        sta acc
+        lda #>[SCR4K-$1200]
+        sta acc+1
+        ldy #0
+        sty lim
+        sty lim+1
+        ldx #>SCRLEN            ; pelne strony
+ss_lp   clc
+        lda lim
+        adc (acc),y
+        sta lim
+        bcc ss_1
+        inc lim+1
+ss_1    iny
+        bne ss_lp
+        inc acc+1
+        dex
+        bne ss_lp
+ss_rest clc                     ; reszta <SCRLEN bajtow
+        lda lim
+        adc (acc),y
+        sta lim
+        bcc ss_2
+        inc lim+1
+ss_2    iny
+        cpy #<SCRLEN
+        bne ss_rest
+        rts
+        ert <SCRLEN=0
+ssum    dta a(0)                ; suma ekranu przed INIT
+hidden  dta 0                   ; 1 = gra zajela pamiec ekranu: ekran wylaczony
 
 ; alldone: Z = 1, gdy wczytano wszystkie bajty danych (done = TOTALB);
 ; TURBO: gdy getbyte oddal caly strumien XEX (used = TOTALB)
@@ -794,7 +864,12 @@ gfxinit lda #0
         ldx #>tmpl
         jsr settext
 ; scron: kolory i Display List loadera, wlacza ekran (tez po INIT gry)
-scron   lda #TCOLOR
+scron   lda hidden
+        beq sc_on
+        lda #0                  ; pamiec ekranu nalezy do gry - nie pokazuj jej
+        sta SDMCTL
+        rts
+sc_on   lda #TCOLOR
         sta COLOR0              ; kolor nazwy gry (z tape_cfg.inc)
         lda #$1C
         sta COLOR1              ; zloty (napisy, logo, pasek)
@@ -899,7 +974,9 @@ bi2     sta BAR,x               ; linia 0
         rts
 
 ; settext: skopiuj 40 B z (A=lo, X=hi) do linii statusu
-settext sta src
+settext ldy hidden              ; pamiec ekranu nalezy do gry - nie pisz
+        bne st_x
+        sta src
         stx src+1
         ldy #39
 st1     lda (src),y
@@ -908,13 +985,15 @@ st1     lda (src),y
         bpl st1
         .if TURBO
         jmp rstat
-        .else
-        rts
         .endif
+st_x    rts
 
         .if TURBO
 ; rstat: linia statusu (STAT, kody ekranowe) -> bitmapa STATBM
-rstat   lda #<STAT
+rstat   lda hidden
+        beq rs_go
+        rts
+rs_go   lda #<STAT
         sta src
         lda #>STAT
         sta src+1
@@ -1014,7 +1093,10 @@ prt3z   jsr digits
         sta STAT,x
         rts
 ; update: przelicz procent / bloki z 'done', odswiez status i pasek
-update  lda #0
+update  lda hidden              ; pamiec ekranu nalezy do gry - nie rysuj
+        beq up_go
+        rts
+up_go   lda #0
         sta ATRACT              ; bez trybu "attract" (przyciemniania)
         lda done                ; q = done >> SHIFT
         sta ql
@@ -1430,5 +1512,10 @@ JLEN    = jhi-jlo
         ert [gtitle&$F000]<>[[gtitle+19]&$F000]
         ert [byline&$F000]<>[[byline+19]&$F000]
         ert [www&$F000]<>[[www+39]&$F000]
+        .if TURBO
+        ert [STATBM&$F000]<>[[STATBM+319]&$F000]   ; bitmapy tez nie moga
+        ert [WWWBM&$F000]<>[[WWWBM+319]&$F000]     ; przekraczac granicy 4 KB
+        .endif
+        ert ZPB+$22>$FF                            ; zmienne loadera na stronie zerowej
 
 ldr_end

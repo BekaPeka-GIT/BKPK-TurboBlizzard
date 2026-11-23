@@ -31,10 +31,13 @@ Wynik: `tape/<nazwa>/<nazwa>.cas` (+ `tape_cfg.inc`, `tape_title.inc`, `<nazwa>_
 
 ## 2. Oceń ostrzeżenia
 
-- `BLAD:` — kaseta nie powstała. Typowe: gra > 255 bloków (~32 KB), segment na loaderze `$0600-…`, na stosie, na `$0300-$047F` (bufory kasety) albo w ROM `$C000+`. Tego loadera nie da się wtedy użyć — powiedz to wprost.
+- `BLAD:` — kaseta nie powstała. Typowe: gra > 255 bloków (~32 KB, bez `--turbo`), segment na stosie (w turbo tylko `$01C0-$01FF`), na `$0300-$047F` (bufory kasety, tylko bez turbo), PORTB z bitem 0 = 0, brak miejsca na loader/ekran (Ghostbusters). Tego loadera nie da się wtedy użyć — powiedz to wprost, zaproponuj `make_blizzard.py`.
+- Rozmieszczenie jest automatyczne: `ZPB` (zmienne na stronie zerowej: `$CE`, `$D6`, `$B0`, `$90`, `$80`), `LDRORG` (adres loadera, pierwsza wolna strona od `$0600`; kompilacja próbna daje rozmiar), ekran, w turbo `EXT` (bufor bloku + bitmapy, `$690` B — zaraz za ekranem albo osobno). Wartości różne od domyślnych trafiają do `tape_cfg.inc`.
+- Segmenty w ROM / rejestrach `$D000-$D7FF` to tylko `UWAGA` (jak DOS: zapis do ROM przepada).
+- Po każdym INIT loader porównuje sumę bloku ekranu sprzed i po INIT; gdy INIT go zmienił (Bruce Lee rozpakowuje tam dane), ekran zostaje wyłączony do końca ładowania, a `update`/`settext`/`rstat` nic nie rysują (flaga `hidden`; błąd = czerwone tło).
 - Przed ostatnim INIT (gdy wczytano już cały plik) i przed RUNAD loader wyłącza ekran (DMA), zamyka C: i zeruje CDTMV1. Bez wyłączenia DMA ANTIC powtarzał śmieciową instrukcję DL z bitem DLI, a OS XL przestawał wołać odroczone VBI gry (Ninja: kolorowe pasy zamiast gry; na AltirraOS tego nie widać — testuj na OS XL).
 - `brak RUNAD` — normalne, gdy grę startuje ostatni INIT (jak Ninja). Jeśli ostatni INIT wraca (`rts`), loader skoczy pod śmieciowy RUNAD — wtedy problem.
-- `gra ma INIT` — zdeasembluj procedury INIT (agent `xex-analyst` albo krótki skrypt) i sprawdź, czy nie czyszczą/nadpisują pamięci ekranu podanej w raporcie ani strony zerowej `$CE-$EA`. Podmiana Display List i kolorów jest OK — loader je przywraca po każdym INIT.
+- `gra ma INIT` — zwykle OK: podmianę Display List i kolorów loader cofa, a zajęcie pamięci ekranu wykrywa i wtedy gasi ekran. Sprawdź tylko, czy INIT nie niszczy zmiennych loadera na stronie zerowej (zakres w linii `Loader:`) ani samego loadera.
 - `strona 2` / `strona zerowa` — zwykle nieszkodliwe (np. `$0244` COLDST), ale wymień je.
 
 ## 3. Raport

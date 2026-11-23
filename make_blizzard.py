@@ -17,6 +17,7 @@ Użycie:
 """
 import argparse
 import os
+import re
 import struct
 import sys
 
@@ -130,9 +131,10 @@ def main():
     title = a.title or base
     out = a.output
     if not out:
-        d = os.path.join('tape', base.lower())
+        stem = re.sub(r'[^a-z0-9_]+', '_', base.lower()).strip('_')   # jak make_tape.py
+        d = os.path.join('tape', stem)
         os.makedirs(d, exist_ok=True)
-        out = os.path.join(d, base.lower() + ('_blizzard_ldr.cas' if a.loader else '_blizzard.cas'))
+        out = os.path.join(d, stem + ('_blizzard_ldr.cas' if a.loader else '_blizzard.cas'))
     loader = open(a.loader, 'rb').read() if a.loader else None
     cas = build(data, title, loader)
     open(out, 'wb').write(cas)
