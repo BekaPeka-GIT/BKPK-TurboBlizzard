@@ -92,6 +92,8 @@ CHBAS   = $02F4
 GPRIOR  = $026F
 ATRACT  = $4D
 DMACTL  = $D400
+DLISTL  = $D402
+VCOUNT  = $D40B
 PORTB   = $D301
 PACTL   = $D302
 
@@ -516,9 +518,12 @@ tblock  sta tcnt
         sta tlen
         stx tcnt+1
         stx tlen+1
-        lda RTCLOK+2            ; poczekaj na VBI - cienie (DL, DMA, kolory)
-tb_vb   cmp RTCLOK+2            ; trafiaja do rejestrow sprzetu, potem
-        beq tb_vb               ; VBI bedzie wylaczone
+tb_vb   lda VCOUNT              ; poczekaj na VBI - cienie (DL, DMA, kolory)
+        cmp #124                ; trafiaja do rejestrow sprzetu, potem VBI
+        bcc tb_vb               ; bedzie wylaczone. Liczymy linie (VCOUNT),
+tb_vb2  lda VCOUNT              ; nie RTCLOK: VBI gry (intro Bruce Lee)
+        cmp #8                  ; moze nie wolac systemowego i RTCLOK stoi
+        bcs tb_vb2
         lda #0
         sta NMIEN_T             ; bez VBI/DLI - ekran dalej wyswietlany
         sta IRQEN
@@ -707,6 +712,12 @@ di_go
         sta ssum
         lda lim+1
         sta ssum+1
+        lda #<safedl            ; na czas INIT: pusta Display List w kodzie loadera -
+        sta SDLSTL              ; INIT moze rozpakowac dane w pamiec ekranu (Bruce Lee)
+        sta DLISTL              ; i ANTIC nie moze wtedy czytac smieci jako DL
+        lda #>safedl
+        sta SDLSTL+1
+        sta DLISTL+1
         jsr callinit
         jsr scrsum              ; INIT zmienil pamiec ekranu (np. rozpakowal tam
         lda lim                 ; dane gry, jak Bruce Lee)? - wtedy ekran zostaje
@@ -763,6 +774,8 @@ ss_2    iny
         rts
         ert <SCRLEN=0
 ssum    dta a(0)                ; suma ekranu przed INIT
+safedl  dta $70,$70,$41,a(safedl)  ; pusta DL: 16 pustych linii + JVB
+        ert [safedl&$FC00]<>[[safedl+4]&$FC00]
 hidden  dta 0                   ; 1 = gra zajela pamiec ekranu: ekran wylaczony
 
 ; alldone: Z = 1, gdy wczytano wszystkie bajty danych (done = TOTALB);

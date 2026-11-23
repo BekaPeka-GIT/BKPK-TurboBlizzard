@@ -151,6 +151,21 @@ Kasety turbo nie wymagają w Altirze żadnych dodatkowych ustawień: Blizzard u�
 
 **Kaseta Blizzard bez loadera** (`make_blizzard.py` bez `--loader`): wczytuj ją tak, jak każą instrukcje twojego Blizzarda (kartridż / ROM).
 
+### Z włożonym kartridżem Phoenix 1.0
+
+Phoenix (32 KB, typ Altirry 33 „Switchable XEGS”) po włączeniu pokazuje swoje menu. Sprawdzone w Altirze:
+
+| Kaseta | Jak wczytać |
+|---|---|
+| **z ekranem BEKAPEKA** (`*_turbo.cas`, `*.cas` z `make_tape.py`) | Włącz Atari, trzymając **SELECT + START**. SELECT wyłącza kartridż (Phoenix sam sprawdza ten klawisz przy starcie), START bootuje kasetę. Po sygnale: PLAY i dowolny klawisz. Dalej jak na gołym Atari: logo, pasek, gra. |
+| **Blizzard bez loadera** (`make_blizzard.py`) | W menu wybierz **5** (Binary File Loader). Gdy pojawi się nazwa gry i `Y/N`, wciśnij **Y**. Sprawdzone na Spy's Demise (kaseta z `make_blizzard.py` jest identyczna z oryginałem). |
+
+Uwagi:
+
+- Kaset z ekranem BEKAPEKA **nie wczytuj opcją 5**: ta opcja pomija nasz loader 600 bodów i sama czyta turbo, a w Altirze kończyło się to błędem programu (Pitstop).
+- Opcja 5 nie poradziła sobie z River Raidem: gra ładuje się pod `$9FF0-$BFFF`, czyli w okno kartridża, i po wczytaniu Altirra zgłasza błąd. Prawdopodobnie dotyczy to każdej gry ładowanej pod `$8000-$BFFF`. Dla takich gier użyj kasety z ekranem BEKAPEKA i SELECT + START.
+- Opcja 1 (TOS) pyta o ramdysk `R:` i kończy w BASIC-u (`READY`). Do kaset z bootem się nie nadaje.
+
 > Wersję `--turbo` testowano w Altirze (River Raid, Ninja). Na prawdziwym sprzęcie nie była jeszcze sprawdzana. Jeśli tam zawiedzie, użyj wersji 600 bodów (bez `--turbo`).
 
 ---
